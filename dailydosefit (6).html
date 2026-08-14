@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>DailyDoseFit</title>
+<style>
+  :root{
+    --bg:#0d1117; --bg2:#161b22; --card:#1b2230; --card2:#232d3d; --line:#2a3546;
+    --text:#e8eef5; --muted:#8a97a8; --muted2:#5c6b7e;
+    --accent:#2ee6a8; --accent2:#16c79a;
+    --water:#38bdf8; --med:#fbbf24; --steps:#a78bfa; --fire:#fb7185;
+    --good:#34d399; --warn:#fbbf24; --bad:#f87171;
+    --radius:18px; --nav-h:64px;
+    font-size:16px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overscroll-behavior:none; -webkit-font-smoothing:antialiased;
+  }
+  .hidden{ display:none !important; }
+  button{ font-family:inherit; cursor:pointer; border:none; color:inherit; }
+  input,select{ font-family:inherit; }
+  ::-webkit-scrollbar{ width:0; height:0; }
+
+  /* ---------- app shell ---------- */
+  #screen{ min-height:100%; padding:calc(env(safe-area-inset-top) + 8px) 16px calc(var(--nav-h) + env(safe-area-inset-bottom) + 20px); max-width:520px; margin:0 auto; }
+  .topbar{ display:flex; align-items:center; gap:12px; margin:6px 2px 18px; }
+  .topbar .hi{ font-size:1.5rem; font-weight:800; letter-spacing:-.02em; }
+  .topbar .sub{ color:var(--muted); font-size:.85rem; margin-top:2px; }
+  .avatar{ width:44px; height:44px; border-radius:50%; margin-left:auto;
+    background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#04241a;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; }
+
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:14px; }
+  .card h3{ margin:0 0 12px; font-size:1rem; font-weight:700; display:flex; align-items:center; gap:8px; }
+  .row{ display:flex; align-items:center; gap:12px; }
+  .grow{ flex:1; }
+  .muted{ color:var(--muted); }
+  .pill{ font-size:.7rem; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--card2); color:var(--muted); }
+
+  /* buttons */
+  .btn{ background:var(--card2); color:var(--text); border-radius:12px; padding:12px 16px; font-weight:700; font-size:.95rem; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+  .btn:active{ transform:scale(.97); }
+  .btn.primary{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#04241a; }
+  .btn.block{ width:100%; }
+  .btn.ghost{ background:transparent; border:1px solid var(--line); }
+  .btn.sm{ padding:8px 12px; font-size:.85rem; border-radius:10px; }
+  .btn.danger{ background:#3a2226; color:var(--bad); }
+
+  /* progress rings */
+  .rings{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .ring-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; text-align:center; }
+  .ring{ position:relative; width:120px; height:120px; margin:0 auto 8px; }
+  .ring svg{ transform:rotate(-90deg); }
+  .ring .mid{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring .mid .big{ font-size:1.5rem; font-weight:800; line-height:1; }
+  .ring .mid .lbl{ font-size:.7rem; color:var(--muted); margin-top:3px; }
+  .ring-card .cap{ font-size:.85rem; font-weight:600; }
+  .ring-card .capsub{ font-size:.75rem; color:var(--muted); }
+
+  /* inputs */
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:.8rem; color:var(--muted); margin-bottom:6px; font-weight:600; }
+  .field input,.field select{ width:100%; background:var(--bg2); border:1px solid var(--line); color:var(--text);
+    padding:13px 14px; border-radius:12px; font-size:1rem; outline:none; }
+  .field input:focus,.field select:focus{ border-color:var(--accent); }
+  .seg{ display:flex; gap:8px; }
+  .seg button{ flex:1; background:var(--bg2); border:1px solid var(--line); color:var(--muted); padding:11px; border-radius:12px; font-weight:700; }
+  .seg button.on{ background:var(--accent); color:#04241a; border-color:var(--accent); }
+
+  /* water */
+  .glasses{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .glass{ width:38px; height:46px; border-radius:6px 6px 10px 10px; border:2px solid var(--water);
+    background:transparent; position:relative; overflow:hidden; }
+  .glass.full{ background:var(--water); }
+  .glass span{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:1rem; }
+
+  /* meds */
+  .med{ display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .med:last-child{ border-bottom:none; }
+  .med .ic{ width:40px; height:40px; border-radius:12px; background:#3a3115; color:var(--med); display:flex; align-items:center; justify-content:center; font-size:1.2rem; }
+  .med .nm{ font-weight:700; }
+  .med .tm{ font-size:.8rem; color:var(--muted); }
+  .check{ width:32px; height:32px; border-radius:50%; border:2px solid var(--line); background:transparent; display:flex; align-items:center; justify-content:center; font-size:1rem; color:var(--muted); }
+  .check.done{ background:var(--good); border-color:var(--good); color:#04241a; }
+
+  /* exercise picker */
+  .picker-head{ position:sticky; top:0; background:var(--bg); padding:8px 0 12px; z-index:5; }
+  .exgrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .ex{ background:var(--card); border:2px solid var(--line); border-radius:14px; padding:12px; position:relative; }
+  .ex.sel{ border-color:var(--accent); background:#13241f; }
+  .ex .emo{ font-size:1.6rem; }
+  .ex .nm{ font-weight:700; font-size:.85rem; margin-top:6px; line-height:1.15; }
+  .ex .meta{ font-size:.72rem; color:var(--muted); margin-top:3px; }
+  .ex .tick{ position:absolute; top:8px; right:8px; width:22px; height:22px; border-radius:50%; background:var(--accent); color:#04241a; display:none; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; }
+  .ex.sel .tick{ display:flex; }
+  .ex .cat{ position:absolute; top:8px; left:8px; }
+
+  /* workout player */
+  #player{ position:fixed; inset:0; background:var(--bg); z-index:100; display:flex; flex-direction:column; padding:calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 20px); }
+  #player .pbar{ height:6px; background:var(--card2); border-radius:999px; overflow:hidden; margin-bottom:20px; }
+  #player .pbar i{ display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); width:0; transition:width .3s; }
+  #player .stage{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  #player .emo{ font-size:5rem; margin-bottom:10px; filter:drop-shadow(0 8px 20px rgba(0,0,0,.4)); }
+  #player .exname{ font-size:1.8rem; font-weight:800; letter-spacing:-.02em; }
+  #player .amt{ font-size:3.5rem; font-weight:800; margin:14px 0 6px; font-variant-numeric:tabular-nums; }
+  #player .amtsub{ color:var(--muted); font-weight:600; }
+  #player .tip{ color:var(--muted); font-size:.9rem; margin-top:16px; max-width:320px; }
+  #player .ctrls{ display:flex; gap:12px; }
+  #player .phase{ text-transform:uppercase; letter-spacing:.15em; font-size:.75rem; font-weight:800; color:var(--accent); margin-bottom:6px; }
+  #player.rest .phase{ color:var(--water); }
+
+  /* bottom nav */
+  #nav{ position:fixed; left:0; right:0; bottom:0; height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+    padding-bottom:env(safe-area-inset-bottom); background:rgba(22,27,34,.92); backdrop-filter:blur(12px);
+    border-top:1px solid var(--line); display:flex; max-width:520px; margin:0 auto; z-index:40; }
+  #nav button{ flex:1; background:transparent; color:var(--muted2); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:.65rem; font-weight:700; }
+  #nav button .ni{ font-size:1.3rem; line-height:1; }
+  #nav button.on{ color:var(--accent); }
+
+  /* onboarding */
+  #onboard{ min-height:100%; display:flex; flex-direction:column; padding:calc(env(safe-area-inset-top) + 30px) 22px calc(env(safe-area-inset-bottom) + 24px); max-width:520px; margin:0 auto; }
+  .logo{ font-size:1.8rem; font-weight:900; letter-spacing:-.03em; }
+  .logo b{ color:var(--accent); }
+  .ob-hero{ text-align:center; margin:auto 0; }
+  .ob-hero .mark{ font-size:4.5rem; }
+  .ob-hero h1{ font-size:1.9rem; margin:12px 0 8px; letter-spacing:-.02em; }
+  .ob-hero p{ color:var(--muted); line-height:1.5; }
+  .step-dots{ display:flex; gap:6px; justify-content:center; margin:18px 0; }
+  .step-dots i{ width:8px; height:8px; border-radius:50%; background:var(--line); }
+  .step-dots i.on{ background:var(--accent); width:22px; border-radius:999px; }
+
+  /* toast */
+  #toasts{ position:fixed; left:0; right:0; top:calc(env(safe-area-inset-top) + 8px); z-index:200; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  .toast{ background:var(--card2); border:1px solid var(--line); border-left:4px solid var(--accent); color:var(--text);
+    padding:12px 16px; border-radius:12px; max-width:88%; font-size:.9rem; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.5);
+    animation:slidein .3s ease, fadeout .4s ease 3.2s forwards; }
+  .toast.water{ border-left-color:var(--water); }
+  .toast.med{ border-left-color:var(--med); }
+  @keyframes slidein{ from{ transform:translateY(-16px); opacity:0; } }
+  @keyframes fadeout{ to{ transform:translateY(-10px); opacity:0; } }
+
+  /* modal */
+  #modal{ position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:120; display:flex; align-items:flex-end; justify-content:center; }
+  #modal .sheet{ background:var(--bg2); border:1px solid var(--line); border-radius:22px 22px 0 0; width:100%; max-width:520px; padding:22px 20px calc(env(safe-area-inset-bottom) + 22px); animation:up .3s ease; }
+  @keyframes up{ from{ transform:translateY(40px); opacity:.4; } }
+  .sheet h3{ margin:0 0 16px; font-size:1.15rem; }
+
+  .streak{ display:inline-flex; align-items:center; gap:6px; background:#3a1f16; color:var(--fire); font-weight:800; padding:6px 12px; border-radius:999px; font-size:.85rem; }
+  .empty{ text-align:center; color:var(--muted); padding:24px 8px; }
+  .empty .big{ font-size:2.4rem; }
+  .fadein{ animation:fi .35s ease; }
+  @keyframes fi{ from{ opacity:0; transform:translateY(8px); } }
+</style>
+</head>
+<body>
+
+<!-- ============ ONBOARDING ============ -->
+<div id="onboard">
+  <div class="logo">Daily<b>Dose</b>Fit</div>
+  <div id="ob-body"></div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app" class="hidden">
+  <div id="screen"></div>
+  <nav id="nav">
+    <button data-view="home" class="on"><span class="ni">🏠</span>Home</button>
+    <button data-view="water"><span class="ni">💧</span>Water</button>
+    <button data-view="meds"><span class="ni">💊</span>Meds</button>
+    <button data-view="fitness"><span class="ni">💪</span>Fitness</button>
+    <button data-view="profile"><span class="ni">👤</span>Profile</button>
+  </nav>
+</div>
+
+<!-- ============ WORKOUT PLAYER ============ -->
+<div id="player" class="hidden"></div>
+
+<!-- ============ MODAL + TOASTS ============ -->
+<div id="modal" class="hidden"></div>
+<div id="toasts"></div>
+
+<script>
+/* =========================================================
+   STORAGE — localStorage (works in the real Android app)
+   with a safe in-memory fallback for sandboxed previews.
+   ========================================================= */
+const Store=(function(){
+  let mem={}, ok=false;
+  try{ const k='__ddf_test'; localStorage.setItem(k,'1'); localStorage.removeItem(k); ok=true; }catch(e){ ok=false; }
+  return {
+    get(key,def){
+      try{ if(ok){ const v=localStorage.getItem(key); return v==null?def:JSON.parse(v); } }catch(e){}
+      return (key in mem)?mem[key]:def;
+    },
+    set(key,val){
+      mem[key]=val;
+      try{ if(ok) localStorage.setItem(key,JSON.stringify(val)); }catch(e){}
+    },
+    remove(key){
+      delete mem[key];
+      try{ if(ok) localStorage.removeItem(key); }catch(e){}
+    }
+  };
+})();
+
+/* =========================================================
+   STATE
+   ========================================================= */
+const todayStr=()=>new Date().toISOString().slice(0,10);
+let S={
+  profile:null,                     // {name,age,sex,weight,unit,waterGoal,stepGoal}
+  date:todayStr(),
+  water:0,                          // glasses today
+  steps:0,
+  meds:[],                          // [{id,name,dose,time,takenDates:[]}]
+  medTaken:{},                      // {medId:true} for today
+  selectedExercises:[],             // ids (up to 20)
+  workoutDoneDate:null,
+  streak:0,
+  lastWorkoutDate:null,
+  remindWater:true, remindMeds:true, waterEveryH:2, lastWaterRemind:0,
+};
+function save(){
+  Store.set('ddf_profile',S.profile);
+  Store.set('ddf_day',{date:S.date,water:S.water,steps:S.steps,medTaken:S.medTaken});
+  Store.set('ddf_meds',S.meds);
+  Store.set('ddf_ex',S.selectedExercises);
+  Store.set('ddf_workout',{doneDate:S.workoutDoneDate,streak:S.streak,last:S.lastWorkoutDate});
+  Store.set('ddf_settings',{remindWater:S.remindWater,remindMeds:S.remindMeds,waterEveryH:S.waterEveryH});
+}
+function load(){
+  S.profile=Store.get('ddf_profile',null);
+  const day=Store.get('ddf_day',null)||{date:todayStr(),water:0,steps:0,medTaken:{}};
+  S.meds=Store.get('ddf_meds',null)||[];
+  S.selectedExercises=Store.get('ddf_ex',null)||[];
+  const w=Store.get('ddf_workout',null)||{doneDate:null,streak:0,last:null};
+  const st=Store.get('ddf_settings',null)||{remindWater:true,remindMeds:true,waterEveryH:2};
+  S.workoutDoneDate=w.doneDate; S.streak=w.streak||0; S.lastWorkoutDate=w.last;
+  S.remindWater=st.remindWater; S.remindMeds=st.remindMeds; S.waterEveryH=st.waterEveryH;
+  // daily reset
+  if(day.date!==todayStr()){
+    S.water=0; S.steps=0; S.medTaken={}; S.date=todayStr();
+    // break streak if a full day was skipped
+    if(S.lastWorkoutDate){ const diff=(new Date(todayStr())-new Date(S.lastWorkoutDate))/86400000; if(diff>1) S.streak=0; }
+    save();
+  } else { S.water=day.water; S.steps=day.steps; S.medTaken=day.medTaken||{}; S.date=day.date; }
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+const $=(s,r=document)=>r.querySelector(s);
+const el=(html)=>{ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; };
+function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
+function toast(msg,type=''){ const t=el(`<div class="toast ${type}">${msg}</div>`); $('#toasts').appendChild(t); setTimeout(()=>t.remove(),3800); }
+function ring(pct,color,size=120,stroke=11){
+  const r=(size-stroke)/2, c=2*Math.PI*r, off=c*(1-Math.min(1,pct));
+  return `<svg width="${size}" height="${size}">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="#26303f" stroke-width="${stroke}" fill="none"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="${color}" stroke-width="${stroke}" fill="none"
+      stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"/>
+  </svg>`;
+}
+function kg(){ return S.profile.unit==='lb' ? S.profile.weight*0.4536 : S.profile.weight; }
+
+/* =========================================================
+   EXERCISE LIBRARY (40)
+   type: 'time' (seconds) or 'reps'. met used for calorie estimate.
+   ========================================================= */
+const EX=[
+ {id:1,name:'Jumping Jacks',emo:'🤸',type:'time',amt:40,cat:'Cardio',met:8,tip:'Keep a steady bounce, arms fully overhead.'},
+ {id:2,name:'High Knees',emo:'🏃',type:'time',amt:30,cat:'Cardio',met:8,tip:'Drive knees to hip height, stay light on your toes.'},
+ {id:3,name:'Butt Kicks',emo:'🦵',type:'time',amt:30,cat:'Cardio',met:7,tip:'Kick heels toward glutes, quick tempo.'},
+ {id:4,name:'Burpees',emo:'🔥',type:'reps',amt:10,cat:'Full Body',met:9,tip:'Chest to floor, explode up into a jump.'},
+ {id:5,name:'Mountain Climbers',emo:'⛰️',type:'time',amt:30,cat:'Core',met:8,tip:'Hips low, drive knees fast toward chest.'},
+ {id:6,name:'Squats',emo:'🪑',type:'reps',amt:15,cat:'Legs',met:5,tip:'Chest up, weight in heels, thighs to parallel.'},
+ {id:7,name:'Jump Squats',emo:'🚀',type:'reps',amt:12,cat:'Legs',met:8,tip:'Land soft, drop straight into the next rep.'},
+ {id:8,name:'Forward Lunges',emo:'🦿',type:'reps',amt:12,cat:'Legs',met:5,tip:'Front knee over ankle, back knee toward floor.'},
+ {id:9,name:'Reverse Lunges',emo:'↩️',type:'reps',amt:12,cat:'Legs',met:5,tip:'Step back, keep torso upright.'},
+ {id:10,name:'Wall Sit',emo:'🧱',type:'time',amt:45,cat:'Legs',met:5,tip:'Back flat on wall, thighs parallel to floor.'},
+ {id:11,name:'Calf Raises',emo:'🦶',type:'reps',amt:20,cat:'Legs',met:4,tip:'Rise onto toes, pause, lower slowly.'},
+ {id:12,name:'Glute Bridge',emo:'🌉',type:'reps',amt:15,cat:'Legs',met:4,tip:'Squeeze glutes at the top, ribs down.'},
+ {id:13,name:'Push-ups',emo:'💪',type:'reps',amt:12,cat:'Upper',met:6,tip:'Body in a straight line, elbows ~45°.'},
+ {id:14,name:'Knee Push-ups',emo:'🙇',type:'reps',amt:12,cat:'Upper',met:4,tip:'Great scaling option — keep hips in line.'},
+ {id:15,name:'Diamond Push-ups',emo:'💎',type:'reps',amt:10,cat:'Upper',met:6,tip:'Hands together, targets triceps.'},
+ {id:16,name:'Pike Push-ups',emo:'🔺',type:'reps',amt:10,cat:'Upper',met:6,tip:'Hips high, lower crown toward floor.'},
+ {id:17,name:'Tricep Dips',emo:'🪟',type:'reps',amt:12,cat:'Upper',met:5,tip:'Use a chair, elbows point straight back.'},
+ {id:18,name:'Plank',emo:'📏',type:'time',amt:45,cat:'Core',met:4,tip:'Squeeze abs and glutes, no sagging hips.'},
+ {id:19,name:'Side Plank (L)',emo:'◀️',type:'time',amt:30,cat:'Core',met:4,tip:'Stack feet, lift hips high.'},
+ {id:20,name:'Side Plank (R)',emo:'▶️',type:'time',amt:30,cat:'Core',met:4,tip:'Stack feet, lift hips high.'},
+ {id:21,name:'Crunches',emo:'🥨',type:'reps',amt:20,cat:'Core',met:4,tip:'Curl shoulders up, chin off chest.'},
+ {id:22,name:'Bicycle Crunches',emo:'🚲',type:'reps',amt:20,cat:'Core',met:5,tip:'Opposite elbow to knee, slow and controlled.'},
+ {id:23,name:'Leg Raises',emo:'🦵',type:'reps',amt:15,cat:'Core',met:4,tip:'Lower legs slowly, keep low back down.'},
+ {id:24,name:'Russian Twists',emo:'🌀',type:'reps',amt:20,cat:'Core',met:4,tip:'Lean back, rotate through your ribs.'},
+ {id:25,name:'Flutter Kicks',emo:'🏊',type:'time',amt:30,cat:'Core',met:4,tip:'Small fast kicks, low back pressed down.'},
+ {id:26,name:'Sit-ups',emo:'⬆️',type:'reps',amt:15,cat:'Core',met:4,tip:'Full range, exhale on the way up.'},
+ {id:27,name:'Superman',emo:'🦸',type:'time',amt:30,cat:'Back',met:3,tip:'Lift arms and legs, squeeze your back.'},
+ {id:28,name:'Bird Dog',emo:'🐦',type:'reps',amt:12,cat:'Back',met:3,tip:'Opposite arm/leg, keep hips level.'},
+ {id:29,name:'Dead Bug',emo:'🪲',type:'reps',amt:12,cat:'Core',met:3,tip:'Slow, keep low back glued to the floor.'},
+ {id:30,name:'Heel Touches',emo:'👟',type:'reps',amt:20,cat:'Core',met:4,tip:'Crunch side to side, tap each heel.'},
+ {id:31,name:'Jump Rope',emo:'🪢',type:'time',amt:45,cat:'Cardio',met:9,tip:'Real or imaginary — quick wrist turns.'},
+ {id:32,name:'Skater Hops',emo:'⛸️',type:'time',amt:30,cat:'Cardio',met:7,tip:'Bound side to side, land softly.'},
+ {id:33,name:'Bear Crawl',emo:'🐻',type:'time',amt:30,cat:'Full Body',met:7,tip:'Knees hover, opposite hand/foot move.'},
+ {id:34,name:'Inchworm',emo:'🐛',type:'reps',amt:8,cat:'Full Body',met:5,tip:'Walk hands out to plank, walk feet in.'},
+ {id:35,name:'Arm Circles',emo:'🔄',type:'time',amt:30,cat:'Warm-up',met:3,tip:'Small to big circles, both directions.'},
+ {id:36,name:'Shoulder Taps',emo:'👋',type:'time',amt:30,cat:'Core',met:4,tip:'Plank position, tap opposite shoulder, minimal hip sway.'},
+ {id:37,name:'Forward Fold',emo:'🙏',type:'time',amt:30,cat:'Flexibility',met:2,tip:'Hinge at hips, let your neck relax.'},
+ {id:38,name:'Cat-Cow',emo:'🐱',type:'time',amt:30,cat:'Flexibility',met:2,tip:'Flow between arching and rounding your spine.'},
+ {id:39,name:"Child's Pose",emo:'🧘',type:'time',amt:30,cat:'Flexibility',met:2,tip:'Sink hips back, breathe into your back.'},
+ {id:40,name:'Quad Stretch',emo:'🦵',type:'time',amt:30,cat:'Flexibility',met:2,tip:'Hold ankle, knees together, stand tall.'},
+];
+const exById=(id)=>EX.find(e=>e.id===id);
+
+/* =========================================================
+   ONBOARDING (profile required first)
+   ========================================================= */
+let obStep=0, obDraft={name:'',age:'',sex:'other',weight:'',unit:'kg'};
+function renderOnboard(){
+  const b=$('#ob-body');
+  if(obStep===0){
+    b.innerHTML=`
+      <div class="ob-hero fadein">
+        <div class="mark">💧💊💪</div>
+        <h1>Welcome to DailyDoseFit</h1>
+        <p>Your daily companion for staying hydrated, taking your meds on time, moving more, and getting a quick workout in — all in one place.</p>
+      </div>
+      <div class="step-dots"><i class="on"></i><i></i><i></i></div>
+      <button class="btn primary block" onclick="obNext()">Get started →</button>`;
+  } else if(obStep===1){
+    b.innerHTML=`
+      <div class="fadein" style="margin-top:20px">
+        <h1 style="font-size:1.5rem;margin:0 0 4px">Create your profile</h1>
+        <p class="muted" style="margin:0 0 20px">We use this to personalise your goals. It stays on your device.</p>
+        <div class="field"><label>Your name</label><input id="p-name" placeholder="e.g. Janeet" value="${obDraft.name}"></div>
+        <div class="field"><label>Age</label><input id="p-age" type="number" inputmode="numeric" placeholder="e.g. 24" value="${obDraft.age}"></div>
+        <div class="field"><label>Sex (for calorie estimates)</label>
+          <div class="seg" id="p-sex">
+            <button data-v="female" class="${obDraft.sex==='female'?'on':''}">Female</button>
+            <button data-v="male" class="${obDraft.sex==='male'?'on':''}">Male</button>
+            <button data-v="other" class="${obDraft.sex==='other'?'on':''}">Other</button>
+          </div>
+        </div>
+        <div class="field"><label>Weight</label>
+          <div class="row">
+            <input id="p-weight" class="grow" type="number" inputmode="decimal" placeholder="e.g. 65" value="${obDraft.weight}">
+            <div class="seg" style="width:120px" id="p-unit">
+              <button data-v="kg" class="${obDraft.unit==='kg'?'on':''}">kg</button>
+              <button data-v="lb" class="${obDraft.unit==='lb'?'on':''}">lb</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="step-dots"><i></i><i class="on"></i><i></i></div>
+      <div class="row"><button class="btn ghost" onclick="obBack()">Back</button><button class="btn primary grow" onclick="obNext()">Continue →</button></div>`;
+    $('#p-sex').onclick=(e)=>{ const btn=e.target.closest('button'); if(!btn)return; obDraft.sex=btn.dataset.v; $$('#p-sex button').forEach(x=>x.classList.toggle('on',x===btn)); };
+    $('#p-unit').onclick=(e)=>{ const btn=e.target.closest('button'); if(!btn)return; obDraft.unit=btn.dataset.v; $$('#p-unit button').forEach(x=>x.classList.toggle('on',x===btn)); };
+  } else if(obStep===2){
+    const kgv=obDraft.unit==='lb'?obDraft.weight*0.4536:(+obDraft.weight||65);
+    const recGlasses=Math.max(6,Math.min(12,Math.round(kgv*35/250)));
+    b.innerHTML=`
+      <div class="fadein" style="margin-top:20px">
+        <h1 style="font-size:1.5rem;margin:0 0 4px">Your daily goals</h1>
+        <p class="muted" style="margin:0 0 20px">Suggested from your profile — tweak anytime.</p>
+        <div class="field"><label>Water goal (glasses of 250 ml)</label><input id="g-water" type="number" inputmode="numeric" value="${recGlasses}"></div>
+        <div class="field"><label>Daily step goal</label><input id="g-steps" type="number" inputmode="numeric" value="8000"></div>
+        <div class="card" style="background:#13241f;border-color:var(--accent)">
+          <div class="row"><span style="font-size:1.4rem">✅</span><div><b>Almost there!</b><div class="muted" style="font-size:.85rem">Next you'll pick your 20 daily exercises.</div></div></div>
+        </div>
+      </div>
+      <div class="step-dots"><i></i><i></i><i class="on"></i></div>
+      <div class="row"><button class="btn ghost" onclick="obBack()">Back</button><button class="btn primary grow" onclick="finishOnboard()">Create profile 🎉</button></div>`;
+  }
+}
+function obNext(){
+  if(obStep===1){
+    obDraft.name=$('#p-name').value.trim();
+    obDraft.age=$('#p-age').value.trim();
+    obDraft.weight=$('#p-weight').value.trim();
+    if(!obDraft.name){ toast('Please enter your name'); return; }
+    if(!obDraft.weight||+obDraft.weight<=0){ toast('Please enter your weight'); return; }
+  }
+  obStep++; renderOnboard();
+}
+function obBack(){ obStep--; renderOnboard(); }
+function finishOnboard(){
+  const waterGoal=Math.max(1,+$('#g-water').value||8);
+  const stepGoal=Math.max(1000,+$('#g-steps').value||8000);
+  S.profile={ name:obDraft.name, age:+obDraft.age||null, sex:obDraft.sex,
+    weight:+obDraft.weight, unit:obDraft.unit, waterGoal, stepGoal };
+  save(); buzz(30);
+  $('#onboard').classList.add('hidden'); $('#app').classList.remove('hidden');
+  // push straight into exercise selection since it's required for fitness
+  go('home'); toast('Profile created — welcome, '+S.profile.name+'! 👋');
+  if(S.selectedExercises.length===0) setTimeout(()=>go('fitness'),400);
+}
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+
+/* =========================================================
+   ROUTER + VIEWS
+   ========================================================= */
+let view='home';
+function go(v){
+  view=v;
+  $$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+  const s=$('#screen'); s.scrollTop=0;
+  ({home:renderHome,water:renderWater,meds:renderMeds,fitness:renderFitness,profile:renderProfile}[v])();
+  s.firstElementChild&&s.firstElementChild.classList.add('fadein');
+}
+$('#nav').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){ buzz(8); go(b.dataset.view); } });
+
+function header(title,sub){
+  const initials=(S.profile.name||'U').trim().slice(0,1).toUpperCase();
+  return `<div class="topbar"><div><div class="hi">${title}</div><div class="sub">${sub}</div></div>
+    <div class="avatar" onclick="go('profile')">${initials}</div></div>`;
+}
+
+/* ---------- HOME ---------- */
+function renderHome(){
+  const wPct=S.water/S.profile.waterGoal, sPct=S.steps/S.profile.stepGoal;
+  const medsToday=S.meds.length, medsDone=S.meds.filter(m=>S.medTaken[m.id]).length;
+  const workoutDone=S.workoutDoneDate===todayStr();
+  const hour=new Date().getHours();
+  const greet=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
+  $('#screen').innerHTML=`
+    ${header(greet+',',S.profile.name+' • '+new Date().toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'}))}
+    <div class="row" style="margin:-6px 2px 14px">
+      <span class="streak">🔥 ${S.streak}-day streak</span>
+      ${workoutDone?'<span class="pill" style="color:var(--good)">Workout done ✓</span>':''}
+    </div>
+    <div class="rings">
+      <div class="ring-card" onclick="go('water')">
+        <div class="ring">${ring(wPct,'var(--water)')}<div class="mid"><div class="big">${S.water}</div><div class="lbl">/ ${S.profile.waterGoal}</div></div></div>
+        <div class="cap">💧 Water</div><div class="capsub">${Math.round(wPct*100)}% of goal</div>
+      </div>
+      <div class="ring-card" onclick="go('fitness')">
+        <div class="ring">${ring(sPct,'var(--steps)')}<div class="mid"><div class="big">${S.steps.toLocaleString()}</div><div class="lbl">steps</div></div></div>
+        <div class="cap">👟 Steps</div><div class="capsub">Goal ${S.profile.stepGoal.toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>💊 Medications <span class="pill" style="margin-left:auto">${medsDone}/${medsToday||0} taken</span></h3>
+      ${medsToday? S.meds.slice(0,3).map(m=>medRow(m,true)).join('') : '<div class="muted" style="font-size:.9rem">No medications added yet.</div>'}
+      <button class="btn ghost block sm" style="margin-top:10px" onclick="go('meds')">Manage medications</button>
+    </div>
+    <div class="card" style="background:linear-gradient(135deg,#13241f,#162a3a);border-color:var(--accent)">
+      <h3>💪 Today's workout</h3>
+      <div class="muted" style="font-size:.9rem;margin-bottom:12px">
+        ${S.selectedExercises.length? (workoutDone?'Nice work — you crushed it today!':S.selectedExercises.length+' exercises picked and ready to go.') : 'Pick your 20 daily exercises to unlock your routine.'}
+      </div>
+      <button class="btn primary block" onclick="go('fitness')">${S.selectedExercises.length? (workoutDone?'Do it again':'Start workout ▶'):'Choose exercises →'}</button>
+    </div>`;
+}
+function medRow(m,compact){
+  const done=!!S.medTaken[m.id];
+  return `<div class="med">
+    <div class="ic">💊</div>
+    <div class="grow"><div class="nm">${m.name}</div><div class="tm">${m.dose?m.dose+' • ':''}${m.time||'anytime'}</div></div>
+    <button class="check ${done?'done':''}" onclick="toggleMed('${m.id}')">${done?'✓':''}</button>
+  </div>`;
+}
+
+/* ---------- WATER ---------- */
+function renderWater(){
+  const goal=S.profile.waterGoal, pct=S.water/goal;
+  let glasses='';
+  for(let i=0;i<Math.max(goal,S.water);i++){ const full=i<S.water; glasses+=`<div class="glass ${full?'full':''}"><span>${full?'💧':''}</span></div>`; }
+  $('#screen').innerHTML=`
+    ${header('Hydration','Stay on top of your water intake')}
+    <div class="card" style="text-align:center">
+      <div class="ring" style="width:160px;height:160px;margin-bottom:12px">${ring(pct,'var(--water)',160,14)}
+        <div class="mid"><div class="big" style="font-size:2.4rem">${S.water}</div><div class="lbl">of ${goal} glasses</div></div></div>
+      <div class="muted" style="font-size:.9rem">${S.water*250} ml today ${S.water>=goal?'• goal reached! 🎉':'• '+((goal-S.water)*250)+' ml to go'}</div>
+      <div class="row" style="margin-top:16px;gap:10px">
+        <button class="btn ghost" onclick="addWater(-1)">−</button>
+        <button class="btn primary grow" onclick="addWater(1)">＋ Add a glass 💧</button>
+        <button class="btn ghost" onclick="addWater(1)" style="display:none"></button>
+      </div>
+      <div class="glasses" style="justify-content:center">${glasses}</div>
+    </div>
+    <div class="card">
+      <h3>⏰ Reminders</h3>
+      <div class="row"><div class="grow">Remind me to drink</div>${toggleHtml('remindWater')}</div>
+      <div class="field" style="margin-top:14px"><label>Remind every (hours)</label>
+        <input type="number" inputmode="numeric" value="${S.waterEveryH}" min="1" onchange="S.waterEveryH=Math.max(1,+this.value||2);save()"></div>
+      <div class="muted" style="font-size:.8rem">Reminders show while the app is open. For alerts when it's closed, the published app uses phone notifications (see setup notes).</div>
+    </div>`;
+}
+function addWater(n){ S.water=Math.max(0,S.water+n); if(n>0){ buzz(10); if(S.water===S.profile.waterGoal) toast('Water goal reached! 🎉','water'); } save(); if(view==='water')renderWater(); }
+
+/* ---------- MEDS ---------- */
+function renderMeds(){
+  $('#screen').innerHTML=`
+    ${header('Medications','Never miss a dose')}
+    <button class="btn primary block" onclick="medSheet()">＋ Add medication</button>
+    <div class="card" style="margin-top:14px">
+      <h3>Today's schedule</h3>
+      ${S.meds.length? S.meds.map(m=>`
+        <div class="med">
+          <div class="ic">💊</div>
+          <div class="grow"><div class="nm">${m.name}</div><div class="tm">${m.dose?m.dose+' • ':''}${m.time||'anytime'}</div></div>
+          <button class="check ${S.medTaken[m.id]?'done':''}" onclick="toggleMed('${m.id}')">${S.medTaken[m.id]?'✓':''}</button>
+          <button class="btn sm ghost" onclick="medSheet('${m.id}')">Edit</button>
+        </div>`).join('')
+      : '<div class="empty"><div class="big">💊</div>No medications yet.<br>Add one to get reminders.</div>'}
+    </div>
+    <div class="card"><div class="row"><div class="grow">Remind me for medications</div>${toggleHtml('remindMeds')}</div></div>`;
+}
+function toggleMed(id){ S.medTaken[id]=!S.medTaken[id]; buzz(12); if(S.medTaken[id]) toast('Marked as taken ✓','med'); save(); go(view); }
+function medSheet(id){
+  const m=id?S.meds.find(x=>x.id===id):{name:'',dose:'',time:''};
+  openModal(`
+    <h3>${id?'Edit':'Add'} medication</h3>
+    <div class="field"><label>Name</label><input id="m-name" placeholder="e.g. Vitamin D" value="${m.name}"></div>
+    <div class="field"><label>Dose (optional)</label><input id="m-dose" placeholder="e.g. 1 tablet, 500mg" value="${m.dose||''}"></div>
+    <div class="field"><label>Time</label><input id="m-time" type="time" value="${m.time||''}"></div>
+    <div class="row" style="margin-top:8px">
+      ${id?'<button class="btn danger" onclick="delMed(\''+id+'\')">Delete</button>':''}
+      <button class="btn primary grow" onclick="saveMed('${id||''}')">Save</button>
+    </div>`);
+}
+function saveMed(id){
+  const name=$('#m-name').value.trim(); if(!name){ toast('Enter a name'); return; }
+  const dose=$('#m-dose').value.trim(), time=$('#m-time').value;
+  if(id){ const m=S.meds.find(x=>x.id===id); Object.assign(m,{name,dose,time}); }
+  else S.meds.push({id:'m'+Date.now(),name,dose,time});
+  save(); closeModal(); go('meds'); toast('Saved 💊','med');
+}
+function delMed(id){ S.meds=S.meds.filter(x=>x.id!==id); delete S.medTaken[id]; save(); closeModal(); go('meds'); }
+
+/* ---------- FITNESS ---------- */
+function renderFitness(){
+  if(S.selectedExercises.length<20 && S.selectedExercises.length!==20 && !fitnessForceRoutine){
+    renderPicker(); return;
+  }
+  const list=S.selectedExercises.map(exById).filter(Boolean);
+  const est=estimateCalories(list);
+  const workoutDone=S.workoutDoneDate===todayStr();
+  $('#screen').innerHTML=`
+    ${header('Fitness','Your daily routine')}
+    <div class="card" style="background:linear-gradient(135deg,#162a3a,#13241f);border-color:var(--accent)">
+      <div class="row"><div class="grow">
+        <div style="font-size:1.6rem;font-weight:800">${list.length} exercises</div>
+        <div class="muted" style="font-size:.9rem">~${Math.round(list.reduce((a,e)=>a+(e.type==='time'?e.amt:e.amt*3),0)/60)} min • ~${est} kcal</div>
+      </div><div style="font-size:2.6rem">💪</div></div>
+      <button class="btn primary block" style="margin-top:14px" onclick="startWorkout()">${workoutDone?'Do it again ▶':'Start workout ▶'}</button>
+      <button class="btn ghost block sm" style="margin-top:8px" onclick="editPicker()">Change my exercises</button>
+    </div>
+    <div class="card">
+      <h3>👟 Step counter</h3>
+      <div class="row"><div class="grow">
+        <div style="font-size:1.8rem;font-weight:800">${S.steps.toLocaleString()} <span class="muted" style="font-size:.9rem;font-weight:600">/ ${S.profile.stepGoal.toLocaleString()}</span></div>
+        <div class="muted" style="font-size:.85rem">≈ ${(S.steps*0.000762).toFixed(2)} km • ${Math.round(S.steps*0.04)} kcal</div>
+      </div><div id="stepstate" class="pill">${stepTracking?'Tracking… ●':'Paused'}</div></div>
+      <button class="btn ${stepTracking?'ghost':'primary'} block" style="margin-top:12px" onclick="toggleSteps()">${stepTracking?'Stop tracking':'Start step tracking'}</button>
+      <div class="muted" style="font-size:.78rem;margin-top:8px">Uses your phone's motion sensor to estimate steps while the app is open. The published app can use the native step sensor for background counting.</div>
+    </div>
+    <div class="card">
+      <h3>Your exercises</h3>
+      <div class="exgrid">${list.map(e=>`<div class="ex sel"><span class="cat pill">${e.cat}</span><div class="emo">${e.emo}</div><div class="nm">${e.name}</div><div class="meta">${e.type==='time'?e.amt+'s':e.amt+' reps'}</div></div>`).join('')}</div>
+    </div>`;
+}
+let fitnessForceRoutine=false;
+function editPicker(){ fitnessForceRoutine=false; renderPicker(); }
+function renderPicker(){
+  const sel=new Set(S.selectedExercises);
+  $('#screen').innerHTML=`
+    ${header('Choose your 20','Pick the exercises for your daily routine')}
+    <div class="picker-head">
+      <div class="card" style="margin:0;padding:12px 16px;display:flex;align-items:center;gap:12px">
+        <div class="grow"><b id="selcount">${sel.size}</b> / 20 selected</div>
+        <button class="btn primary sm" id="pickdone" onclick="confirmPicker()" ${sel.size===20?'':'disabled style="opacity:.5"'}>Save routine</button>
+      </div>
+    </div>
+    <div class="exgrid" id="exgrid" style="margin-top:12px">
+      ${EX.map(e=>`<div class="ex ${sel.has(e.id)?'sel':''}" data-id="${e.id}">
+        <span class="cat pill">${e.cat}</span><div class="tick">✓</div>
+        <div class="emo">${e.emo}</div><div class="nm">${e.name}</div>
+        <div class="meta">${e.type==='time'?e.amt+'s':e.amt+' reps'}</div></div>`).join('')}
+    </div>`;
+  $('#exgrid').onclick=(ev)=>{
+    const c=ev.target.closest('.ex'); if(!c)return; const id=+c.dataset.id;
+    if(sel.has(id)) sel.delete(id);
+    else{ if(sel.size>=20){ toast('That\'s 20 — deselect one first'); return; } sel.add(id); }
+    c.classList.toggle('sel',sel.has(id)); buzz(6);
+    $('#selcount').textContent=sel.size;
+    const done=$('#pickdone'); done.disabled=sel.size!==20; done.style.opacity=sel.size===20?'1':'.5';
+    window.__pickSel=sel;
+  };
+  window.__pickSel=sel;
+}
+function confirmPicker(){
+  const sel=window.__pickSel; if(!sel||sel.size!==20){ toast('Pick exactly 20 exercises'); return; }
+  S.selectedExercises=[...sel]; save(); fitnessForceRoutine=true; buzz(30);
+  toast('Routine saved! 💪'); renderFitness();
+}
+function estimateCalories(list){
+  let cal=0; const w=kg();
+  list.forEach(e=>{ const hrs=(e.type==='time'?e.amt:e.amt*3)/3600; cal+=e.met*w*hrs; });
+  return Math.round(cal);
+}
+
+/* ---------- WORKOUT PLAYER ---------- */
+let W=null;
+function startWorkout(){
+  const queue=S.selectedExercises.map(exById).filter(Boolean);
+  if(!queue.length){ toast('Pick your exercises first'); return; }
+  W={queue,idx:0,phase:'ready',t:5,timer:null,paused:false,started:Date.now()};
+  $('#player').classList.remove('hidden','rest');
+  buzz(20); tickWorkout(true);
+  W.timer=setInterval(()=>tickWorkout(false),1000);
+}
+function tickWorkout(first){
+  const p=$('#player');
+  if(!first && !W.paused){ W.t--; }
+  if(W.t<=0){
+    if(W.phase==='ready'){ W.phase='exercise'; W.t=curEx().type==='time'?curEx().amt:Math.max(20,curEx().amt*3); buzz(30); }
+    else if(W.phase==='exercise'){ nextExercise(); return; }
+    else if(W.phase==='rest'){ W.phase='exercise'; W.t=curEx().type==='time'?curEx().amt:Math.max(20,curEx().amt*3); p.classList.remove('rest'); buzz(30); }
+  }
+  drawWorkout();
+}
+function curEx(){ return W.queue[W.idx]; }
+function nextExercise(){
+  W.idx++;
+  if(W.idx>=W.queue.length){ finishWorkout(); return; }
+  W.phase='rest'; W.t=15; $('#player').classList.add('rest'); buzz(20); drawWorkout();
+}
+function drawWorkout(){
+  const p=$('#player'), e=curEx();
+  const total=W.queue.length, prog=(W.idx+(W.phase==='exercise'?1:0))/total*100;
+  if(W.phase==='ready'){
+    p.innerHTML=playerShell(prog,`
+      <div class="phase">Get ready</div>
+      <div class="emo">${e.emo}</div>
+      <div class="exname">${e.name}</div>
+      <div class="amt">${W.t}</div><div class="amtsub">starting in…</div>
+      <div class="tip">${e.tip}</div>`);
+  } else if(W.phase==='rest'){
+    const nx=W.queue[W.idx];
+    p.innerHTML=playerShell(prog,`
+      <div class="phase">Rest</div>
+      <div class="emo">😮‍💨</div>
+      <div class="exname">Up next: ${nx.name}</div>
+      <div class="amt">${W.t}</div><div class="amtsub">seconds rest</div>
+      <div class="ctrls" style="margin-top:24px"><button class="btn ghost" onclick="skipRest()">Skip rest →</button></div>`);
+  } else {
+    const isTime=e.type==='time';
+    p.innerHTML=playerShell(prog,`
+      <div class="phase">Exercise ${W.idx+1} of ${total}</div>
+      <div class="emo">${e.emo}</div>
+      <div class="exname">${e.name}</div>
+      <div class="amt">${isTime?W.t:e.amt}</div>
+      <div class="amtsub">${isTime?'seconds left':'reps'}</div>
+      <div class="tip">${e.tip}</div>
+      <div class="ctrls" style="margin-top:24px">
+        <button class="btn ghost" onclick="togglePause()">${W.paused?'Resume ▶':'Pause ⏸'}</button>
+        <button class="btn primary" onclick="doneExercise()">${isTime?'Skip →':'Done ✓'}</button>
+      </div>`);
+  }
+}
+function playerShell(prog,inner){
+  return `<div class="pbar"><i style="width:${prog}%"></i></div>
+    <div class="row" style="margin-bottom:8px"><button class="btn ghost sm" onclick="quitWorkout()">✕ Quit</button><div class="grow"></div><div class="pill">🔥 ${estimateCalories(W.queue.slice(0,W.idx+1))} kcal</div></div>
+    <div class="stage">${inner}</div>`;
+}
+function togglePause(){ W.paused=!W.paused; drawWorkout(); }
+function skipRest(){ W.t=0; tickWorkout(false); }
+function doneExercise(){ buzz(15); nextExercise(); }
+function quitWorkout(){ clearInterval(W.timer); $('#player').classList.add('hidden'); W=null; }
+function finishWorkout(){
+  clearInterval(W.timer);
+  const mins=Math.round((Date.now()-W.started)/60000);
+  const cal=estimateCalories(W.queue);
+  // streak + completion
+  const t=todayStr();
+  if(S.workoutDoneDate!==t){
+    if(S.lastWorkoutDate){ const diff=(new Date(t)-new Date(S.lastWorkoutDate))/86400000; S.streak=diff===1?S.streak+1:1; }
+    else S.streak=1;
+    S.lastWorkoutDate=t; S.workoutDoneDate=t; save();
+  }
+  buzz([40,60,40,60,120]);
+  $('#player').classList.remove('rest');
+  $('#player').innerHTML=`
+    <div class="stage fadein">
+      <div class="emo" style="font-size:6rem">🎉</div>
+      <div class="exname">Workout complete!</div>
+      <div class="amt" style="font-size:2.2rem;margin:18px 0 4px">${W.queue.length} exercises</div>
+      <div class="amtsub">${mins} min • ~${cal} kcal • 🔥 ${S.streak}-day streak</div>
+      <button class="btn primary block" style="margin-top:28px;max-width:280px" onclick="quitWorkout();go('home')">Back to home</button>
+    </div>`;
+  W.queue=W.queue; // keep for summary
+}
+
+/* ---------- STEP COUNTER (accelerometer estimate) ---------- */
+let stepTracking=false, _lastPeak=0, _lastMag=0, _accBuf=[];
+function toggleSteps(){ stepTracking?stopSteps():startSteps(); }
+async function startSteps(){
+  try{
+    if(typeof DeviceMotionEvent!=='undefined' && typeof DeviceMotionEvent.requestPermission==='function'){
+      const res=await DeviceMotionEvent.requestPermission();
+      if(res!=='granted'){ toast('Motion permission needed for step tracking'); return; }
+    }
+  }catch(e){ toast('Motion sensor not available on this device'); return; }
+  window.addEventListener('devicemotion',onMotion);
+  stepTracking=true; toast('Step tracking on — put your phone in your pocket 👟'); if(view==='fitness')renderFitness();
+}
+function stopSteps(){ window.removeEventListener('devicemotion',onMotion); stepTracking=false; save(); if(view==='fitness')renderFitness(); }
+function onMotion(ev){
+  const a=ev.accelerationIncludingGravity||ev.acceleration; if(!a)return;
+  const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
+  _accBuf.push(mag); if(_accBuf.length>10)_accBuf.shift();
+  const avg=_accBuf.reduce((x,y)=>x+y,0)/_accBuf.length;
+  const now=Date.now();
+  // peak detection: crossing above avg+threshold with debounce
+  if(mag>avg+2.2 && _lastMag<=avg+2.2 && now-_lastPeak>280){
+    _lastPeak=now; S.steps++; 
+    if(S.steps%25===0) save();
+    if(view==='fitness'){ const s=$('#stepstate'); }
+    if(S.steps===S.profile.stepGoal) toast('Step goal reached! 🎉');
+  }
+  _lastMag=mag;
+}
+
+/* ---------- PROFILE ---------- */
+function renderProfile(){
+  const p=S.profile;
+  $('#screen').innerHTML=`
+    ${header('Profile',p.name)}
+    <div class="card">
+      <h3>Your details</h3>
+      <div class="field"><label>Name</label><input id="e-name" value="${p.name}"></div>
+      <div class="row" style="gap:12px">
+        <div class="field grow"><label>Age</label><input id="e-age" type="number" value="${p.age||''}"></div>
+        <div class="field grow"><label>Weight (${p.unit})</label><input id="e-weight" type="number" value="${p.weight}"></div>
+      </div>
+      <div class="field"><label>Water goal (glasses)</label><input id="e-water" type="number" value="${p.waterGoal}"></div>
+      <div class="field"><label>Daily step goal</label><input id="e-steps" type="number" value="${p.stepGoal}"></div>
+      <button class="btn primary block" onclick="saveProfile()">Save changes</button>
+    </div>
+    <div class="card">
+      <h3>🔔 Reminders</h3>
+      <div class="row" style="margin-bottom:12px"><div class="grow">Water reminders</div>${toggleHtml('remindWater')}</div>
+      <div class="row" style="margin-bottom:14px"><div class="grow">Medication reminders</div>${toggleHtml('remindMeds')}</div>
+      <button class="btn ghost block sm" onclick="askNotify()">Enable phone notifications</button>
+    </div>
+    <div class="card">
+      <h3>Stats</h3>
+      <div class="row" style="justify-content:space-between"><span class="muted">Current streak</span><b>🔥 ${S.streak} days</b></div>
+      <div class="row" style="justify-content:space-between;margin-top:8px"><span class="muted">Exercises chosen</span><b>${S.selectedExercises.length}/20</b></div>
+    </div>
+    <button class="btn danger block" onclick="resetAll()">Reset all data</button>
+    <div class="muted" style="text-align:center;font-size:.75rem;margin-top:14px">DailyDoseFit • all data stays on your device</div>`;
+}
+function saveProfile(){
+  S.profile.name=$('#e-name').value.trim()||S.profile.name;
+  S.profile.age=+$('#e-age').value||S.profile.age;
+  S.profile.weight=+$('#e-weight').value||S.profile.weight;
+  S.profile.waterGoal=Math.max(1,+$('#e-water').value||S.profile.waterGoal);
+  S.profile.stepGoal=Math.max(1000,+$('#e-steps').value||S.profile.stepGoal);
+  save(); toast('Profile updated ✓'); go('profile');
+}
+function resetAll(){
+  openModal(`<h3>Reset everything?</h3><p class="muted">This deletes your profile, meds, and progress. This can't be undone.</p>
+    <div class="row"><button class="btn ghost grow" onclick="closeModal()">Cancel</button><button class="btn danger grow" onclick="doReset()">Delete all</button></div>`);
+}
+function doReset(){ ['ddf_profile','ddf_day','ddf_meds','ddf_ex','ddf_workout','ddf_settings'].forEach(k=>Store.remove(k)); location.reload(); }
+
+/* ---------- toggles ---------- */
+function toggleHtml(key){
+  return `<label style="position:relative;display:inline-block;width:48px;height:28px">
+    <input type="checkbox" ${S[key]?'checked':''} onchange="S['${key}']=this.checked;save()" style="opacity:0;width:0;height:0">
+    <span style="position:absolute;inset:0;background:${S[key]?'var(--accent)':'var(--line)'};border-radius:999px;transition:.2s"></span>
+    <span style="position:absolute;top:3px;left:${S[key]?'23px':'3px'};width:22px;height:22px;background:#fff;border-radius:50%;transition:.2s"></span>
+  </label>`;
+}
+
+/* ---------- modal ---------- */
+function openModal(html){ const m=$('#modal'); m.classList.remove('hidden'); m.innerHTML=`<div class="sheet">${html}</div>`; m.onclick=(e)=>{ if(e.target===m)closeModal(); }; }
+function closeModal(){ $('#modal').classList.add('hidden'); $('#modal').innerHTML=''; }
+
+/* ---------- notifications + reminder loop ---------- */
+async function askNotify(){
+  if(!('Notification' in window)){ toast('Notifications not supported here — they work in the published app'); return; }
+  try{ const r=await Notification.requestPermission(); toast(r==='granted'?'Notifications enabled 🔔':'Notifications blocked'); }catch(e){ toast('Could not enable notifications'); }
+}
+function notify(title,body,tag){
+  try{ if('Notification' in window && Notification.permission==='granted'){ new Notification(title,{body,tag}); return; } }catch(e){}
+}
+function reminderTick(){
+  const now=new Date();
+  // water
+  if(S.remindWater && S.water<S.profile.waterGoal){
+    const gap=S.waterEveryH*3600*1000;
+    if(now.getHours()>=8 && now.getHours()<22 && Date.now()-S.lastWaterRemind>gap){
+      S.lastWaterRemind=Date.now();
+      toast('Time for a glass of water 💧','water'); notify('DailyDoseFit 💧','Time to hydrate — log a glass!','water');
+    }
+  }
+  // meds by time
+  if(S.remindMeds){
+    const hhmm=now.toTimeString().slice(0,5);
+    S.meds.forEach(m=>{ if(m.time===hhmm && !S.medTaken[m.id]){
+      toast(`Time to take ${m.name} 💊`,'med'); notify('Medication reminder 💊',`Time to take ${m.name}${m.dose?' ('+m.dose+')':''}`,m.id); buzz(60);
+    }});
+  }
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+(function init(){
+  load();
+  if(!S.profile){ obStep=0; renderOnboard(); }
+  else{ $('#onboard').classList.add('hidden'); $('#app').classList.remove('hidden'); if(S.selectedExercises.length===20) fitnessForceRoutine=true; go('home'); }
+  setInterval(reminderTick,30000);
+  setInterval(()=>{ // midnight rollover check
+    if(S.date!==todayStr()) load(), (view&&$('#app')&&!$('#app').classList.contains('hidden')&&go(view));
+  },60000);
+})();
+</script>
+</body>
+</html>
